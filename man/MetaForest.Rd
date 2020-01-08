@@ -4,21 +4,29 @@
 \alias{MetaForest}
 \title{Conduct a MetaForest analysis to explore heterogeneity in meta-analytic data.}
 \usage{
-MetaForest(formula, data, vi = "vi", whichweights = "random",
-  num.trees = 500, mtry = NULL, method = "REML", tau2 = NULL, ...)
+MetaForest(formula, data, vi = "vi", study = NULL,
+  whichweights = "random", num.trees = 500, mtry = NULL,
+  method = "REML", tau2 = NULL, ...)
 }
 \arguments{
 \item{formula}{Formula. Specify a formula for the MetaForest model, for
 example, \code{yi ~ .} to predict the outcome \code{yi} from all moderators
-in the data.}
+in the data. Only additive formulas are allowed (i.e., \code{x1+x2+x3}).
+Interaction terms and non-linear terms are not required, as the random
+forests algorithm inherently captures these associations.}
 
-\item{data}{Data.frame. Provide a data.frame containing the effect size,
-moderators, and the variance of the effect size.
-Defaults to 100.}
+\item{data}{A data.frame containing the effect size, moderators, and the
+variance of the effect size.}
 
 \item{vi}{Character. Specify the name of the column in the \code{data} that
 contains the variances of the effect sizes. This column will be removed from
 the data prior to analysis. Defaults to \code{"vi"}.}
+
+\item{study}{Character. Optionally, specify the name of the column in the
+\code{data} that contains the study id. Use this when the data includes
+multiple effect sizes per study. This column can be a vector of integers, or
+a factor. This column will be removed from the data prior to analysis.
+See \code{Details} for more information about analyzing dependent data.}
 
 \item{whichweights}{Character. Indicate what time of weights are required.
 A random-effects MetaForest is grown by specifying \code{whichweights =
@@ -34,8 +42,9 @@ split. Defaults to the square root of the number moderators (rounded down).}
 
 \item{method}{Character. Specify the method by which to estimate the residual
 variance. Can be set to one of the following: "DL", "HE", "SJ", "ML", "REML",
-"EB", "HS", or "GENQ". Default is "REML". See the \link[metafor]{metafor} package
-for more information about these estimators.}
+"EB", "HS", or "GENQ". Default is "REML". See the
+\code{\link[metafor:rma.uni]{metafor}} package for more information about
+these estimators.}
 
 \item{tau2}{Numeric. Specify a predetermined value for the residual
 heterogeneity. Entering a value here supersedes the estimated tau2 value.
@@ -59,13 +68,27 @@ MetaForest uses a weighted random forest to explore heterogeneity in
 meta-analytic data. MetaForest is a wrapper for \link[ranger]{ranger}
 (Wright & Ziegler, 2015). As input, MetaForest takes the study effect sizes
 and their variances (these can be computed, for example, using the
-\link[metafor]{metafor} package), as well as the moderators that are to be
-included in the model. By default, MetaForest uses random-effects weights,
-and estimates the between-studies variance using a restricted
-maximum-likelihood estimator. However, it may be beneficial to first conduct
-an unweighted MetaForest, and then use the estimated residual heterogeneity
-from this model as the estimate of \code{tau2} for a random-effects weighted
-MetaForest.
+\code{\link[metafor:rma.uni]{metafor}} package), as well as the moderators
+that are to be included in the model. By default, MetaForest uses
+random-effects weights, and estimates the between-studies variance using a
+restricted maximum-likelihood estimator. However, it may be beneficial to
+first conduct an unweighted MetaForest, and then use the estimated residual
+heterogeneity from this model as the estimate of \code{tau2} for a
+random-effects weighted MetaForest.
+}
+\details{
+For dependent data, a clustered MetaForest analysis is more
+appropriate. This is because the predictive performance of a MetaForest
+analysis is evaluated on out-of-bootstrap cases, and when cases out of the
+bootstrap sample originate from the same study, the model will be overly
+confident in its ability to predict their value. When the MetaForest is
+clustered by the \code{study} variable, the dataset is first split into two
+cross-validation samples by study. All dependent effect sizes from each study
+are thus included in the same cross-validation sample. Then, two random
+forests are grown on these cross-validation samples, and for each random
+forest, the other sample is used to calculate prediction error and variable
+importance (see \href{http://doi.org/10.1007/s11634-016-0276-4}{Janitza,
+Celik, & Boulesteix, 2016}).
 }
 \examples{
 #Example 1:

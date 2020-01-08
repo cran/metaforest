@@ -4,22 +4,28 @@
 #' meta-analytic data. MetaForest is a wrapper for \link[ranger]{ranger}
 #' (Wright & Ziegler, 2015). As input, MetaForest takes the study effect sizes
 #' and their variances (these can be computed, for example, using the
-#' \link[metafor]{metafor} package), as well as the moderators that are to be
-#' included in the model. By default, MetaForest uses random-effects weights,
-#' and estimates the between-studies variance using a restricted
-#' maximum-likelihood estimator. However, it may be beneficial to first conduct
-#' an unweighted MetaForest, and then use the estimated residual heterogeneity
-#' from this model as the estimate of \code{tau2} for a random-effects weighted
-#' MetaForest.
+#' \code{\link[metafor:rma.uni]{metafor}} package), as well as the moderators
+#' that are to be included in the model. By default, MetaForest uses
+#' random-effects weights, and estimates the between-studies variance using a
+#' restricted maximum-likelihood estimator. However, it may be beneficial to
+#' first conduct an unweighted MetaForest, and then use the estimated residual
+#' heterogeneity from this model as the estimate of \code{tau2} for a
+#' random-effects weighted MetaForest.
 #' @param formula Formula. Specify a formula for the MetaForest model, for
 #' example, \code{yi ~ .} to predict the outcome \code{yi} from all moderators
-#' in the data.
-#' @param data Data.frame. Provide a data.frame containing the effect size,
-#' moderators, and the variance of the effect size.
-#' Defaults to 100.
+#' in the data. Only additive formulas are allowed (i.e., \code{x1+x2+x3}).
+#' Interaction terms and non-linear terms are not required, as the random
+#' forests algorithm inherently captures these associations.
+#' @param data A data.frame containing the effect size, moderators, and the
+#' variance of the effect size.
 #' @param vi Character. Specify the name of the column in the \code{data} that
 #' contains the variances of the effect sizes. This column will be removed from
 #' the data prior to analysis. Defaults to \code{"vi"}.
+#' @param study Character. Optionally, specify the name of the column in the
+#' \code{data} that contains the study id. Use this when the data includes
+#' multiple effect sizes per study. This column can be a vector of integers, or
+#' a factor. This column will be removed from the data prior to analysis.
+#' See \code{Details} for more information about analyzing dependent data.
 #' @param whichweights Character. Indicate what time of weights are required.
 #' A random-effects MetaForest is grown by specifying \code{whichweights =
 #' "random"}. A fixed-effects MetaForest is grown by specifying
@@ -31,8 +37,9 @@
 #' split. Defaults to the square root of the number moderators (rounded down).
 #' @param method Character. Specify the method by which to estimate the residual
 #' variance. Can be set to one of the following: "DL", "HE", "SJ", "ML", "REML",
-#' "EB", "HS", or "GENQ". Default is "REML". See the \link[metafor]{metafor} package
-#' for more information about these estimators.
+#' "EB", "HS", or "GENQ". Default is "REML". See the
+#' \code{\link[metafor:rma.uni]{metafor}} package for more information about
+#' these estimators.
 #' @param tau2 Numeric. Specify a predetermined value for the residual
 #' heterogeneity. Entering a value here supersedes the estimated tau2 value.
 #' Defaults to NULL.
@@ -46,6 +53,18 @@
 #' of a random-effects meta-analysis on the residual heterogeneity, or the
 #' difference between the effect sizes predicted by MetaForest and the observed
 #' effect sizes.
+#' @details For dependent data, a clustered MetaForest analysis is more
+#' appropriate. This is because the predictive performance of a MetaForest
+#' analysis is evaluated on out-of-bootstrap cases, and when cases out of the
+#' bootstrap sample originate from the same study, the model will be overly
+#' confident in its ability to predict their value. When the MetaForest is
+#' clustered by the \code{study} variable, the dataset is first split into two
+#' cross-validation samples by study. All dependent effect sizes from each study
+#' are thus included in the same cross-validation sample. Then, two random
+#' forests are grown on these cross-validation samples, and for each random
+#' forest, the other sample is used to calculate prediction error and variable
+#' importance (see \href{http://doi.org/10.1007/s11634-016-0276-4}{Janitza,
+#' Celik, & Boulesteix, 2016}).
 #' @import stats
 #' @import ranger
 #' @import metafor
@@ -86,43 +105,39 @@
 #' summary(mf.bd2004, digits = 4)
 #' #Examine variable importance plot
 #' VarImpPlot(mf.bd2004)
-MetaForest <- function(formula, data, vi = "vi", whichweights = "random",
+MetaForest <- function(formula, data, vi = "vi", study = NULL,
+                       whichweights = "random",
                        num.trees = 500, mtry = NULL, method = "REML",
                        tau2 = NULL, ...) {
-    args <- match.call()
-    yi <- as.character(formula[2])
-    mods <- get_all_vars(formula, data)
-    if(vi %in% names(mods)) mods <- mods[-match(vi, names(mods))]
-    vi <- data[[vi]]
-    data <- mods
-
-    rma_before <- metafor::rma(yi = data[[yi]], vi = vi, method = method)
-
-    if(is.null(tau2)) tau2 <- rma_before$tau2
-
-    if (whichweights == "unif") {
-        metaweights <- rep(1, nrow(data))
+    if(grepl("(\\*|:|-)", formula[3])){
+      stop("MetaForest only accepts additive model formulae. The underlying regression trees algorithm inherently captures interactions and non-linear effects as a sequence of consecutive splits on the interacting variables, so no interaction terms need to be specified.")
     }
-    if (whichweights == "fixed") {
-        metaweights <- (1/vi)
-    }
-    if (whichweights == "random") {
-        metaweights <- 1/(vi + tau2)
+    cl <- match.call()
+    args <- as.list(cl)[-1]
+
+    df <- get_all_vars(formula, data = data)
+    # Ensure that the first var is the dependent variable. Not sure if this is
+    # necessary, but I'm going to use the position of the dependent variable
+    # elsewhere.
+    if(!names(df)[1] == all.vars(formula)[1]){
+      df <- df[, c(all.vars(formula)[1], names(df)[-match(all.vars(formula)[1], names(df))])]
     }
 
-    metaweights <- (metaweights/sum(metaweights)) * nrow(data)
+    if(vi %in% names(df)) df <- df[-match(vi, names(df))]
+    args[["v"]] <- data[[vi]]
 
-    mf <- ranger::ranger(formula = formula, data = data, num.trees = num.trees,
-                 mtry = mtry, importance = "permutation", write.forest = TRUE,
-                 case.weights = metaweights, ...)
-    mf$call <- formula
-    predicted <- mf$predictions
-    observed <- data[[yi]]
-    residuals <- observed - predicted
-
-    rma_after <- metafor::rma(yi = residuals, vi = vi, method = method)
-
-    output <- list(forest = mf, rma_before = rma_before, rma_after = rma_after, call = args, data = data, vi = vi, weights = metaweights)
-    class(output) <- "MetaForest"
+    args[["formula"]] <- paste(formula[2], formula[3],sep = " ~ ")
+    args[["data"]] <- NULL
+    if(is.null(study)){
+      args[["df"]] <- df
+      output <- do.call(MF, args)
+    } else {
+      if(study %in% names(df)) df <- df[-match(study, names(df))]
+      args[["df"]] <- df
+      args[["id"]] <- data[[study]]
+      args[["study"]] <- NULL
+      output <- do.call(MF_cluster, args)
+    }
+    output$call <- cl
     output
 }
