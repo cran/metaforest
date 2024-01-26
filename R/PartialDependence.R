@@ -39,12 +39,13 @@
 #' @param output Character. What type of output should be returned? Defaults to
 #' \code{"plot"}, which returns and plots a gtable object. To obtain a list of
 #' \code{ggplot} objects instead, provide the argument \code{"list"}.
-#' @param ... Additional arguments to be passed to \code{marginalPrediction}.
+#' @param ... Additional arguments to be passed to and from functions.
 #' @return A gtable object.
 #' @import ggplot2
 #' @importFrom methods hasArg
 #' @examples
-#' # Partial dependence plot for MetaForest() model:
+#' \dontrun{
+#' #' # Partial dependence plot for MetaForest() model:
 #' set.seed(42)
 #' data <- SimulateSMD(k_train = 200, model = es * x[, 1] + es * x[, 2] + es *
 #'                                            x[, 1] * x[, 2])$training
@@ -54,7 +55,6 @@
 #'                         tau2 = 0.2450)
 #' # Examine univariate partial dependence plot for all variables in the model:
 #' PartialDependence(mf.random, pi = .8)
-#' \dontrun{
 #' # Examine bivariate partial dependence plot the plot_int between X1 and X2:
 #' pd.plot <- PartialDependence(mf.random, vars = c("X1", "X2"), plot_int = TRUE)
 #' # Save to pdf file
@@ -139,10 +139,8 @@ PartialDependence.MetaForest <-
            mod_levels = NULL,
            output = "plot",
            ...) {
+    all_args <- as.list(match.call()[-1])
     # Check input arguments ---------------------------------------------------
-    if(hasArg("interaction")){
-      stop("The argument 'interaction' has been deprecated, and is replaced by the argument 'moderator'. See ?PartialDependence for help on how to use the 'moderator' argument." )
-    }
     if(hasArg("label_elements")){
       label_elements <- eval(match.call()[["label_elements"]])
     } else {
@@ -151,7 +149,7 @@ PartialDependence.MetaForest <-
     if (is.null(vars)) {
       select_vars <- names(x$forest$variable.importance)
     } else {
-      if (!class(vars) == "character") {
+      if (!inherits(vars, what = "character")) {
         stop("Argument 'vars' must be a character string.", call. = FALSE)
       }
       select_vars <-
@@ -170,7 +168,7 @@ PartialDependence.MetaForest <-
     }
     if (!is.null(moderator)) {
       select_vars <- select_vars[!select_vars == moderator]
-      if (!class(moderator) == "character") {
+      if (!inherits(moderator, what = "character")) {
         stop(
           "Moderator must be a character string, corresponding to the name of a variable in the MetaForest analysis.",
           call. = FALSE
@@ -211,7 +209,7 @@ PartialDependence.MetaForest <-
     cases <- nrow(x$data)
 
     numeric_vars <-
-      which(sapply(x$data[select_vars], class) %in% c("numeric", "integer"))
+      which(sapply(x$data[select_vars], inherits, c("numeric", "integer")))
 
     if (is.null(resolution)) {
       resolution <-
@@ -233,6 +231,9 @@ PartialDependence.MetaForest <-
 
     cont_mod <- FALSE
     raw.data <- data.table(x$data, wi = x$weights)
+    setcolorder(raw.data, c(names(raw.data)[!names(raw.data) %in% x$forest$forest$independent.variable.names],
+                            x$forest$forest$independent.variable.names
+                            ))
     if (!is.null(moderator)) {
       if (inherits(x$data[[moderator]], c("numeric", "integer"))) {
         if (is.null(mod_levels)) {
@@ -318,8 +319,11 @@ create_plotlist <-
       .plot <- pd[[.thisgrob]]
       if(!rename_labels){
         .plot[, ("Variable") := names(pd[[.thisgrob]])[1]]
+        y_label <- names(raw.data)[1]
+
       } else {
         .plot[, ("Variable") := rename_fun(names(pd[[.thisgrob]])[1], names(label_elements), label_elements)]
+        y_label <- rename_fun(names(raw.data)[1], names(label_elements), label_elements)
       }
       if (plot_int) {
         if (cont_mod) {
@@ -360,7 +364,7 @@ create_plotlist <-
               )
             ) +
               scale_y_continuous(limits = y_limits) +
-              ylab(names(raw.data)[1])
+              ylab(y_label)
           } else {
             p <- ggplot(
               .plot,
@@ -373,7 +377,7 @@ create_plotlist <-
               )
             ) +
               scale_y_continuous(limits = y_limits) +
-              ylab(names(raw.data)[1])
+              ylab(y_label)
           }
         }
 
@@ -383,7 +387,7 @@ create_plotlist <-
           p <- ggplot(.plot, aes_string(x = names(.plot)[1],
                                         y = names(.plot)[2])) +
             scale_y_continuous(limits = y_limits) +
-            ylab(names(raw.data)[1])
+            ylab(y_label)
         } else {
           p <- ggplot(.plot,
                       aes_string(
@@ -396,7 +400,7 @@ create_plotlist <-
             scale_color_continuous(guide = "none") +
             scale_fill_continuous(guide = "none") +
             scale_y_continuous(limits = y_limits) +
-            ylab(names(raw.data)[1])
+            ylab(y_label)
         }
 
       }

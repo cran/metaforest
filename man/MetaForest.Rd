@@ -4,9 +4,18 @@
 \alias{MetaForest}
 \title{Conduct a MetaForest analysis to explore heterogeneity in meta-analytic data.}
 \usage{
-MetaForest(formula, data, vi = "vi", study = NULL,
-  whichweights = "random", num.trees = 500, mtry = NULL,
-  method = "REML", tau2 = NULL, ...)
+MetaForest(
+  formula,
+  data,
+  vi = "vi",
+  study = NULL,
+  whichweights = "random",
+  num.trees = 500,
+  mtry = NULL,
+  method = "REML",
+  tau2 = NULL,
+  ...
+)
 }
 \arguments{
 \item{formula}{Formula. Specify a formula for the MetaForest model, for
@@ -87,8 +96,7 @@ cross-validation samples by study. All dependent effect sizes from each study
 are thus included in the same cross-validation sample. Then, two random
 forests are grown on these cross-validation samples, and for each random
 forest, the other sample is used to calculate prediction error and variable
-importance (see \href{http://doi.org/10.1007/s11634-016-0276-4}{Janitza,
-Celik, & Boulesteix, 2016}).
+importance, see \doi{10.1007/s11634-016-0276-4}.
 }
 \examples{
 #Example 1:

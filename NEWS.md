@@ -1,3 +1,17 @@
+# Version 0.1.5
+
+* Fixed NOTES in CRAN check
+* Fixed plot.ranger()
+* Fixed seq_unif.integer() so it will no longer duplicate unique values when
+  length.out exceeds the number of unique values
+
+# Version 0.1.4
+
+* ClusterMF is hard deprecated. Replace any legacy call to ClusterMF with a call
+  to MetaForest with the same arguments.
+* Fixed PartialDependence for ranger objects
+* Fixed bug where the argument "vi" was passed on to ranger()
+
 # Version 0.1.3
 
 * ClusterMF is soft deprecated; it has the same functionality as 

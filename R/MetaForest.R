@@ -63,8 +63,7 @@
 #' are thus included in the same cross-validation sample. Then, two random
 #' forests are grown on these cross-validation samples, and for each random
 #' forest, the other sample is used to calculate prediction error and variable
-#' importance (see \href{http://doi.org/10.1007/s11634-016-0276-4}{Janitza,
-#' Celik, & Boulesteix, 2016}).
+#' importance, see \doi{10.1007/s11634-016-0276-4}.
 #' @import stats
 #' @import ranger
 #' @import metafor
@@ -112,6 +111,7 @@ MetaForest <- function(formula, data, vi = "vi", study = NULL,
     if(grepl("(\\*|:|-)", formula[3])){
       stop("MetaForest only accepts additive model formulae. The underlying regression trees algorithm inherently captures interactions and non-linear effects as a sequence of consecutive splits on the interacting variables, so no interaction terms need to be specified.")
     }
+ # browser()
     cl <- match.call()
     args <- as.list(cl)[-1]
 
@@ -125,7 +125,7 @@ MetaForest <- function(formula, data, vi = "vi", study = NULL,
 
     if(vi %in% names(df)) df <- df[-match(vi, names(df))]
     args[["v"]] <- data[[vi]]
-
+    args[["vi"]] <- NULL
     args[["formula"]] <- paste(formula[2], formula[3],sep = " ~ ")
     args[["data"]] <- NULL
     if(is.null(study)){

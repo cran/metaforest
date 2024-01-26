@@ -4,9 +4,18 @@
 \alias{PartialDependence}
 \title{PartialDependence: Partial dependence plots}
 \usage{
-PartialDependence(x, vars = NULL, pi = NULL, rawdata = FALSE,
-  bw = FALSE, resolution = NULL, moderator = NULL,
-  mod_levels = NULL, output = "plot", ...)
+PartialDependence(
+  x,
+  vars = NULL,
+  pi = NULL,
+  rawdata = FALSE,
+  bw = FALSE,
+  resolution = NULL,
+  moderator = NULL,
+  mod_levels = NULL,
+  output = "plot",
+  ...
+)
 }
 \arguments{
 \item{x}{Model object.}
@@ -50,7 +59,7 @@ levels to retain in the plot (i.e., dropping the other factor levels).}
 \code{"plot"}, which returns and plots a gtable object. To obtain a list of
 \code{ggplot} objects instead, provide the argument \code{"list"}.}
 
-\item{...}{Additional arguments to be passed to \code{marginalPrediction}.}
+\item{...}{Additional arguments to be passed to and from functions.}
 }
 \value{
 A gtable object.
@@ -66,7 +75,8 @@ include plot_int effects, except when the rma model is bivariate, and the
 \code{plot_int} argument is set to \code{TRUE}.
 }
 \examples{
-# Partial dependence plot for MetaForest() model:
+\dontrun{
+#' # Partial dependence plot for MetaForest() model:
 set.seed(42)
 data <- SimulateSMD(k_train = 200, model = es * x[, 1] + es * x[, 2] + es *
                                            x[, 1] * x[, 2])$training
@@ -76,7 +86,6 @@ mf.random <- MetaForest(formula = yi ~ ., data = data,
                         tau2 = 0.2450)
 # Examine univariate partial dependence plot for all variables in the model:
 PartialDependence(mf.random, pi = .8)
-\dontrun{
 # Examine bivariate partial dependence plot the plot_int between X1 and X2:
 pd.plot <- PartialDependence(mf.random, vars = c("X1", "X2"), plot_int = TRUE)
 # Save to pdf file

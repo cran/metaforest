@@ -19,10 +19,10 @@ knitr::opts_chunk$set(
 #  set.seed(62)
 
 ## ----echo = FALSE, message=FALSE----------------------------------------------
-library(metaforest)
-library(caret)
-data <- fukkink_lont
-set.seed(62)
+#  library(metaforest)
+#  library(caret)
+#  data <- fukkink_lont
+#  set.seed(62)
 
 ## ----eval = FALSE-------------------------------------------------------------
 #  # Run model with many trees to check convergence
@@ -35,8 +35,8 @@ set.seed(62)
 #  plot(check_conv)
 
 ## ----echo = FALSE-------------------------------------------------------------
-check_conv <- readRDS("C:/Git_Repositories/S4_meta-analysis/check_conv.RData")
-plot(check_conv)
+#  check_conv <- readRDS("C:/Git_Repositories/S4_meta-analysis/check_conv.RData")
+#  plot(check_conv)
 
 ## ----eval=FALSE---------------------------------------------------------------
 #  # Model with 5000 trees for replication
@@ -56,8 +56,8 @@ plot(check_conv)
 #  retain_mods <- preselect_vars(preselected, cutoff = .5)
 
 ## ----echo = FALSE-------------------------------------------------------------
-preselected <- readRDS("C:/Git_Repositories/S4_meta-analysis/preselected.RData")
-retain_mods <- preselect_vars(preselected, cutoff = .5)
+#  preselected <- readRDS("C:/Git_Repositories/S4_meta-analysis/preselected.RData")
+#  retain_mods <- preselect_vars(preselected, cutoff = .5)
 
 ## ----eval = FALSE-------------------------------------------------------------
 #  # Load the caret library
@@ -86,27 +86,27 @@ retain_mods <- preselect_vars(preselected, cutoff = .5)
 #  mf_cv$results[which.min(mf_cv$results$RMSE), ]
 
 ## ----echo = FALSE, warning=FALSE----------------------------------------------
-mf_cv <- readRDS("C:/Git_Repositories/S4_meta-analysis/mf_cv.RData")
-mf_cv$results[which.min(mf_cv$results$RMSE), ]
-# Extract R^2_{cv} for the optimal tuning parameters
-r2_cv <- mf_cv$results$Rsquared[which.min(mf_cv$results$RMSE)]
+#  mf_cv <- readRDS("C:/Git_Repositories/S4_meta-analysis/mf_cv.RData")
+#  mf_cv$results[which.min(mf_cv$results$RMSE), ]
+#  # Extract R^2_{cv} for the optimal tuning parameters
+#  r2_cv <- mf_cv$results$Rsquared[which.min(mf_cv$results$RMSE)]
 
 ## -----------------------------------------------------------------------------
-# For convenience, extract final model
-final <- mf_cv$finalModel
-# Extract R^2_{oob} from the final model
-r2_oob <- final$forest$r.squared
-# Plot convergence
-plot(final)
+#  # For convenience, extract final model
+#  final <- mf_cv$finalModel
+#  # Extract R^2_{oob} from the final model
+#  r2_oob <- final$forest$r.squared
+#  # Plot convergence
+#  plot(final)
 
 ## -----------------------------------------------------------------------------
-# Plot variable importance
-VarImpPlot(final)
-# Sort the variable names by importance, so that the
-# partial dependence plots will be ranked by importance
-ordered_vars <- names(final$forest$variable.importance)[
-  order(final$forest$variable.importance, decreasing = TRUE)]
-# Plot partial dependence
-PartialDependence(final, vars = ordered_vars,
-                  rawdata = TRUE, pi = .95)
+#  # Plot variable importance
+#  VarImpPlot(final)
+#  # Sort the variable names by importance, so that the
+#  # partial dependence plots will be ranked by importance
+#  ordered_vars <- names(final$forest$variable.importance)[
+#    order(final$forest$variable.importance, decreasing = TRUE)]
+#  # Plot partial dependence
+#  PartialDependence(final, vars = ordered_vars,
+#                    rawdata = TRUE, pi = .95)
 
